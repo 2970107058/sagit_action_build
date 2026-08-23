@@ -1,4 +1,4 @@
-name: Build kernel by clang-r487747
+name: Build kernel for sagit
 on:
   watch:
     types: [started]
