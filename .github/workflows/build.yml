@@ -55,11 +55,11 @@ jobs:
 
   
 
-    - name: Download clang-r487747
+    - name: Download clang-383902b
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
         mkdir clang-aosp
-        git clone https://github.com/tomxi1997/build-aosp-clang-for-arm64/releases/download/v14/clang-r487747.tar.xz clang-aosp --depth=1
+        git clone https://github.com/tomxi1997/Toolchain.git clang-aosp --depth=1
           
         
 
@@ -78,7 +78,7 @@ jobs:
             echo "HAVE_SOURCE_BOOT_IMAGE=true" >> $GITHUB_ENV
         fi
   
-    - name: Setup ReSukiSu
+    - name: Setup ReSukiSU
       if: env.ENABLE_KERNELSU == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
