@@ -91,6 +91,7 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)  
             export PATH=$GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin:$PATH
             export CROSS_COMPILE=aarch64-linux-
+            export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
             make -j$(nproc --all) O=out ARCH=${{ env.ARCH }} ${{ env.KERNEL_CONFIG }}
             make -j$(nproc --all) O=out ARCH=${{ env.ARCH }}
 
