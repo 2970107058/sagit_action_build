@@ -89,11 +89,10 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         export KBUILD_BUILD_HOST=Github-Action
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)  
-            export PATH=$GITHUB_WORKSPACE/kernel_workspace/ggc-lineageos/bin
+            export PATH=$GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin:$PATH
             export CROSS_COMPILE=aarch64-linux-
             make -j$(nproc --all) O=out ARCH=${{ env.ARCH }} ${{ env.KERNEL_CONFIG }}
             make -j$(nproc --all) O=out ARCH=${{ env.ARCH }}
-        fi
 
     - name: Check a kernel output files
       run: |
