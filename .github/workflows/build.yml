@@ -56,6 +56,27 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
         git clone ${{ env.KERNEL_SOURCE }} -b ${{ env.KERNEL_SOURCE_BRANCH }} android-kernel --depth=1
+
+    - name: Inspect kernel hooks
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+
+        echo "===== exec.c ====="
+        grep -n -E 'do_execve(at)?_common|do_execve' fs/exec.c || true
+
+        echo "===== stat.c ====="
+        grep -n -E 'newfstatat|newfstat|newlstat|fstatat' fs/stat.c || true
+
+        echo "===== open.c ====="
+        grep -n -E 'faccessat|do_faccessat' fs/open.c || true
+
+        echo "===== reboot ====="
+        grep -n -E 'SYSCALL_DEFINE4\(reboot|sys_reboot' kernel/reboot.c kernel/sys.c 2>/dev/null || true
+
+        echo "===== SELinux ====="
+        grep -n -E 'write_op|sel_handle_status_ops|selinux_status_page|selinux_status_lock|policy_rwlock|sel_mutex' \
+        security/selinux/selinuxfs.c \
+        security/selinux/ss/services.c 2>/dev/null || true
         
     - name: Setup ReSukiSU
       run: |
@@ -69,6 +90,9 @@ jobs:
             echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU_MANUAL_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
+            echo "CONFIG_KSU_MANUAL_HOOK_AUTO_INPUT_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
+            echo "CONFIG_KSU_MANUAL_HOOK_AUTO_SETUID_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
+            echo "CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             
         if [ ${{ env.DISABLE_LTO }} = true ]; then
             sed -i 's/CONFIG_LTO=y/CONFIG_LTO=n/' arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
