@@ -155,4 +155,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: boot${{ env.UPLOADNAME }}-${{ env.DEVICE }}-${{ env.BUILD_TIME }}
-        path: kernel_workspace/boot.img
+        path: kernel_workspace/boot.img 
