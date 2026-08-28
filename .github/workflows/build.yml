@@ -97,6 +97,9 @@ jobs:
 
         echo "===== services.c context ====="
         sed -n '65,90p' security/selinux/ss/services.c
+
+        echo "===== ReSukiSU execveat definition ====="
+        grep -Rns -A5 -B5 "ksu_handle_execveat" . 2>/dev/null || true
         
     - name: Setup ReSukiSU
       run: |
