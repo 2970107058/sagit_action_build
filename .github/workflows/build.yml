@@ -102,27 +102,27 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
-
+    
     - name: Apply ReSukiSU Execve Hook
       run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
 
-          python3 <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
 
           path = Path("fs/exec.c")
           source = path.read_text()
 
           hook = "ksu_handle_execveat"
-
+          
           # 已经存在则不重复修改
           if hook in source:
               print("[INFO] ksu_handle_execveat already exists, skipping.")
               raise SystemExit(0)
 
           # 找到 do_execveat_common()
-          marker = "static int do_execveat_common("
-          pos = source.find(marker)
+           marker = "static int do_execveat_common("
+           pos = source.find(marker)
 
           if pos == -1:
               raise SystemExit(
@@ -168,7 +168,7 @@ jobs:
 
           echo "===== Verify execve hook ====="
           grep -n -A12 -B5 "ksu_handle_execveat" fs/exec.c
-      
+          
     - name: Setup Configuration for Kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
