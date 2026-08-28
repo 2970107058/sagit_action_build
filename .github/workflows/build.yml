@@ -77,6 +77,26 @@ jobs:
         grep -n -E 'write_op|sel_handle_status_ops|selinux_status_page|selinux_status_lock|policy_rwlock|sel_mutex' \
         security/selinux/selinuxfs.c \
         security/selinux/ss/services.c 2>/dev/null || true
+
+        echo "===== exec.c context ====="
+        sed -n '1530,1585p' fs/exec.c
+
+        echo "===== stat.c context ====="
+        sed -n '265,320p' fs/stat.c
+
+        echo "===== open.c context ====="
+        sed -n '335,365p' fs/open.c
+
+        echo "===== reboot.c context ====="
+        sed -n '270,310p' kernel/reboot.c
+
+        echo "===== selinuxfs.c context ====="
+        sed -n '50,75p' security/selinux/selinuxfs.c
+        sed -n '255,275p' security/selinux/selinuxfs.c
+        sed -n '660,680p' security/selinux/selinuxfs.c
+
+        echo "===== services.c context ====="
+        sed -n '65,90p' security/selinux/ss/services.c
         
     - name: Setup ReSukiSU
       run: |
