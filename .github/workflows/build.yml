@@ -119,6 +119,22 @@ jobs:
           echo "===== Verify ReSukiSU execveat hook ====="
           grep -n -A12 -B5 "ksu_handle_execveat" fs/exec.c
 
+    - name: Apply ReSukiSU Faccessat Hook
+      run: |
+          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+
+          echo "===== Applying ReSukiSU faccessat hook ====="
+
+          if grep -q "ksu_handle_faccessat" fs/open.c; then
+            echo "[INFO] ksu_handle_faccessat already exists, skipping."
+            exit 0
+          fi
+
+          python3 -c 'from pathlib import Path; p=Path("fs/open.c"); s=p.read_text(); marker="SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)"; pos=s.find(marker); assert pos != -1, "[ERROR] faccessat() not found in fs/open.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\n__attribute__((hot))\nextern int ksu_handle_faccessat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *mode, int *flags);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] faccessat() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_faccessat(&dfd, &filename, &mode, NULL);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU faccessat hook applied.")'
+
+          echo "===== Verify ReSukiSU faccessat hook ====="
+          grep -n -A12 -B5 "ksu_handle_faccessat" fs/open.c
+          
     - name: Setup Configuration for Kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
