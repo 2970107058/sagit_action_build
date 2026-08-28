@@ -102,73 +102,23 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
-    
+
     - name: Apply ReSukiSU Execve Hook
       run: |
-          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
 
-          python3 - <<'PY'
-          from pathlib import Path
+          echo "===== Applying ReSukiSU execveat hook ====="
 
-          path = Path("fs/exec.c")
-          source = path.read_text()
+          if grep -q "ksu_handle_execveat" fs/exec.c; then
+            echo "[INFO] ksu_handle_execveat already exists, skipping."
+            exit 0
+          fi
 
-          hook = "ksu_handle_execveat"
-          
-          # 已经存在则不重复修改
-          if hook in source:
-              print("[INFO] ksu_handle_execveat already exists, skipping.")
-              raise SystemExit(0)
+          python3 -c 'from pathlib import Path; p=Path("fs/exec.c"); s=p.read_text(); marker="static int do_execveat_common("; pos=s.find(marker); assert pos != -1, "[ERROR] do_execveat_common() not found"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\n__attribute__((hot))\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,\n\t\t\t\tvoid *argv, void *envp, int *flags);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] function opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU execveat hook applied.")'
 
-          # 找到 do_execveat_common()
-           marker = "static int do_execveat_common("
-           pos = source.find(marker)
-
-          if pos == -1:
-              raise SystemExit(
-                  "[ERROR] do_execveat_common() was not found in fs/exec.c"
-              )
-
-          # 找函数体的 {
-          brace = source.find("{", pos)
-
-          if brace == -1:
-              raise SystemExit(
-                  "[ERROR] Could not find the opening brace of do_execveat_common()"
-              )
-
-          declaration = """#ifdef CONFIG_KSU_MANUAL_HOOK
-          __attribute__((hot))
-          extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,
-                          void *argv, void *envp, int *flags);
-          #endif
-
-          """
-
-          call = """#ifdef CONFIG_KSU_MANUAL_HOOK
-              ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
-          #endif
-          """
-
-          # declaration 放在函数定义前
-          source = source[:pos] + declaration + source[pos:]
-
-          # 重新定位函数
-          pos = source.find(marker)
-          brace = source.find("{", pos)
-
-          # call 放在函数体开头
-          insert_pos = brace + 1
-          source = source[:insert_pos] + "\n" + call + source[insert_pos:]
-
-          path.write_text(source)
-
-          print("[OK] ReSukiSU execveat hook applied.")
-          PY
-
-          echo "===== Verify execve hook ====="
+          echo "===== Verify ReSukiSU execveat hook ====="
           grep -n -A12 -B5 "ksu_handle_execveat" fs/exec.c
-          
+
     - name: Setup Configuration for Kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
