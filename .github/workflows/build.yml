@@ -97,6 +97,9 @@ jobs:
 
         echo "===== services.c context ====="
         sed -n '65,90p' security/selinux/ss/services.c
+
+        echo "===== stat64 definitions ====="
+        grep -n -E 'SYSCALL_DEFINE2\(fstat64|SYSCALL_DEFINE4\(fstatat64' fs/stat.c || true
         
     - name: Setup ReSukiSU
       run: |
@@ -148,7 +151,6 @@ jobs:
             
         if [ ${{ env.DISABLE_LTO }} = true ]; then
             sed -i 's/CONFIG_LTO=y/CONFIG_LTO=n/' arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
-            sed -i 's/CONFIG_LTO_CLANG=y/CONFIG_LTO_CLANG=n/' arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             sed -i 's/CONFIG_THINLTO=y/CONFIG_THINLTO=n/' arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_LTO_NONE=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
         fi
