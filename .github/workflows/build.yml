@@ -164,6 +164,22 @@ jobs:
 
           echo "===== Verify ReSukiSU stat hooks ====="
           grep -n -A8 -B5 -E "ksu_handle_stat|ksu_handle_newfstat_ret|ksu_handle_fstat64_ret" fs/stat.c
+
+    - name: Apply ReSukiSU Reboot Hook
+      run: |
+          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+
+          echo "===== Applying ReSukiSU reboot hook ====="
+
+          if grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+            echo "[INFO] ksu_handle_sys_reboot already exists, skipping."
+            exit 0
+          fi
+
+          python3 -c 'from pathlib import Path; p=Path("kernel/reboot.c"); s=p.read_text(); marker="SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,"; pos=s.find(marker); assert pos != -1, "[ERROR] reboot() not found in kernel/reboot.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\tvoid __user *arg);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] reboot() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_sys_reboot(magic1, magic2, cmd, arg);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU reboot hook applied.")'
+
+          echo "===== Verify ReSukiSU reboot hook ====="
+          grep -n -A12 -B5 "ksu_handle_sys_reboot" kernel/reboot.c
           
     - name: Setup Configuration for Kernel
       run: |
