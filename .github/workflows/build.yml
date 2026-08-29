@@ -137,6 +137,33 @@ jobs:
 
           echo "===== Verify ReSukiSU faccessat hook ====="
           grep -n -A12 -B5 "ksu_handle_faccessat" fs/open.c
+
+    - name: Apply ReSukiSU Stat Hooks
+      run: |
+          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+
+          echo "===== Applying ReSukiSU stat hooks ====="
+
+          if grep -q "ksu_handle_stat" fs/stat.c; then
+            echo "[INFO] ksu_handle_stat already exists, skipping."
+          else
+            python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,"; pos=s.find(marker); assert pos != -1, "[ERROR] newfstatat() not found in fs/stat.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\n__attribute__((hot))\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user,\n\t\t\t\tstruct path *path, struct kstat *stat, int *flags);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] newfstatat() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_stat(&dfd, &filename, NULL, &stat, &flag);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU newfstatat hook applied.")'
+          fi
+
+          if grep -q "ksu_handle_newfstat_ret" fs/stat.c; then
+            echo "[INFO] ksu_handle_newfstat_ret already exists, skipping."
+          else
+            python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user *, statbuf)"; pos=s.find(marker); assert pos != -1, "[ERROR] newfstat() not found in fs/stat.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern int ksu_handle_newfstat_ret(int *fd, struct stat __user **statbuf);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] newfstat() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_newfstat_ret(&fd, &statbuf);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU newfstat hook applied.")'
+          fi
+
+          if grep -q "ksu_handle_fstat64_ret" fs/stat.c; then
+            echo "[INFO] ksu_handle_fstat64_ret already exists, skipping."
+          else
+            python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE2(fstat64, unsigned long, fd, struct stat64 __user *, statbuf)"; pos=s.find(marker); assert pos != -1, "[ERROR] fstat64() not found in fs/stat.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern int ksu_handle_fstat64_ret(int *fd, struct stat64 __user **statbuf);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] fstat64() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_fstat64_ret(&fd, &statbuf);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU fstat64 hook applied.")'
+          fi
+
+          echo "===== Verify ReSukiSU stat hooks ====="
+          grep -n -A8 -B5 -E "ksu_handle_stat|ksu_handle_newfstat_ret|ksu_handle_fstat64_ret" fs/stat.c
           
     - name: Setup Configuration for Kernel
       run: |
