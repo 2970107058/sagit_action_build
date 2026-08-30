@@ -88,6 +88,13 @@ jobs:
             echo "CONFIG_CC_WERROR=n" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
         fi
 
+    - name: Check mdss_prim_panel_fb_unblank
+      run: |
+        cd "$GITHUB_WORKSPACE/kernel_workspace/android-kernel"
+
+        echo "===== Search mdss_prim_panel_fb_unblank ====="
+        grep -Rns "mdss_prim_panel_fb_unblank" . || true
+        
     - name: Build kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
