@@ -24,7 +24,7 @@ jobs:
         echo "KERNEL_SOURCE_BRANCH=$(cat $CONFIG_ENV | grep -w "KERNEL_SOURCE_BRANCH" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
         echo "KERNEL_CONFIG=$(cat $CONFIG_ENV | grep -w "KERNEL_CONFIG" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
         echo "KERNEL_IMAGE_NAME=$(cat $CONFIG_ENV | grep -w "KERNEL_IMAGE_NAME" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
-        echo "DISABLE_LTO=$(cat $CONFIG_ENV | grep -w "DISABLE_LTO" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
+        echo "DISABLE_LTO_CONFIG=$(cat $CONFIG_ENV | grep -w "DISABLE_LTO" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
         echo "DISABLE_CC_WERROR=$(cat $CONFIG_ENV | grep -w "DISABLE_CC_WERROR" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
         
     - name: Set swap to 10G
@@ -192,7 +192,7 @@ jobs:
             echo "CONFIG_KSU_MANUAL_HOOK_AUTO_SETUID_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU_MANUAL_HOOK_AUTO_INITRC_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             
-        if [ ${{ env.DISABLE_LTO }} = true ]; then
+        if [ ${{ env.DISABLE_LTO_CONFIG }} = true ]; then
             sed -i 's/CONFIG_LTO=y/CONFIG_LTO=n/' arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             sed -i 's/CONFIG_THINLTO=y/CONFIG_THINLTO=n/' arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_LTO_NONE=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
@@ -241,21 +241,11 @@ jobs:
             
           
             mkdir -p out
-            
-            echo "===== Search literal true in kernel build files ====="
-            grep -Rns -E '(^|[[:space:],])true([[:space:],]|$)' \
-            Makefile \
-            arch/arm64/Makefile \
-            scripts \
-            Kbuild \
-            arch/arm64 \
-            2>/dev/null || true
-            
             make ARCH=arm64 O=out clean
             make ARCH=arm64 O=out mrproper
             make ARCH=arm64 O=out vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             ./scripts/config --file out/.config --disable CONFIG_COMPAT_VDSO
-            make ARCH=arm64 O=out V=1 -j1
+            make ARCH=arm64 O=out -j$(nproc --all)
 
     - name: Check a kernel output files
       run: |
