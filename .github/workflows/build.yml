@@ -64,8 +64,8 @@ jobs:
 
     - name: Apply ReSukiSU Manual Hooks
       run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        python3 "$GITHUB_WORKSPACE/apply_resukisu_hooks.py"
+        python3 "$GITHUB_WORKSPACE/apply_resukisu_hooks.py" \
+          "$GITHUB_WORKSPACE/kernel_workspace/android-kernel"
 
     - name: Setup Configuration for Kernel
       run: |
