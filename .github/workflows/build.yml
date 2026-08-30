@@ -57,146 +57,16 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace
         git clone ${{ env.KERNEL_SOURCE }} -b ${{ env.KERNEL_SOURCE_BRANCH }} android-kernel --depth=1
 
-    - name: Inspect kernel hooks
-      run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-
-        echo "===== exec.c ====="
-        grep -n -E 'do_execve(at)?_common|do_execve' fs/exec.c || true
-
-        echo "===== stat.c ====="
-        grep -n -E 'newfstatat|newfstat|newlstat|fstatat' fs/stat.c || true
-
-        echo "===== open.c ====="
-        grep -n -E 'faccessat|do_faccessat' fs/open.c || true
-
-        echo "===== reboot ====="
-        grep -n -E 'SYSCALL_DEFINE4\(reboot|sys_reboot' kernel/reboot.c kernel/sys.c 2>/dev/null || true
-
-        echo "===== SELinux ====="
-        grep -n -E 'write_op|sel_handle_status_ops|selinux_status_page|selinux_status_lock|policy_rwlock|sel_mutex' \
-        security/selinux/selinuxfs.c \
-        security/selinux/ss/services.c 2>/dev/null || true
-
-        echo "===== exec.c context ====="
-        sed -n '1530,1585p' fs/exec.c
-
-        echo "===== stat.c context ====="
-        sed -n '265,320p' fs/stat.c
-
-        echo "===== open.c context ====="
-        sed -n '335,365p' fs/open.c
-
-        echo "===== reboot.c context ====="
-        sed -n '270,310p' kernel/reboot.c
-
-        echo "===== selinuxfs.c context ====="
-        sed -n '50,75p' security/selinux/selinuxfs.c
-        sed -n '255,275p' security/selinux/selinuxfs.c
-        sed -n '660,680p' security/selinux/selinuxfs.c
-
-        echo "===== services.c context ====="
-        sed -n '65,90p' security/selinux/ss/services.c
-
-        echo "===== stat64 definitions ====="
-        grep -n -E 'SYSCALL_DEFINE2\(fstat64|SYSCALL_DEFINE4\(fstatat64' fs/stat.c || true
-        
     - name: Setup ReSukiSU
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
 
-    - name: Apply ReSukiSU Execve Hook
+    - name: Apply ReSukiSU Manual Hooks
       run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        python3 "$GITHUB_WORKSPACE/scripts/apply_resukisu_hooks.py" \
+          "$GITHUB_WORKSPACE/kernel_workspace/android-kernel"
 
-          echo "===== Applying ReSukiSU execveat hook ====="
-
-          if grep -q "ksu_handle_execveat" fs/exec.c; then
-            echo "[INFO] ksu_handle_execveat already exists, skipping."
-            exit 0
-          fi
-
-          python3 -c 'from pathlib import Path; p=Path("fs/exec.c"); s=p.read_text(); marker="static int do_execveat_common("; pos=s.find(marker); assert pos != -1, "[ERROR] do_execveat_common() not found"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\n__attribute__((hot))\nextern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,\n\t\t\t\tvoid *argv, void *envp, int *flags);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] function opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU execveat hook applied.")'
-
-          echo "===== Verify ReSukiSU execveat hook ====="
-          grep -n -A12 -B5 "ksu_handle_execveat" fs/exec.c
-
-    - name: Apply ReSukiSU Faccessat Hook
-      run: |
-          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-
-          echo "===== Applying ReSukiSU faccessat hook ====="
-
-          if grep -q "ksu_handle_faccessat" fs/open.c; then
-            echo "[INFO] ksu_handle_faccessat already exists, skipping."
-            exit 0
-          fi
-
-          python3 -c 'from pathlib import Path; p=Path("fs/open.c"); s=p.read_text(); marker="SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)"; pos=s.find(marker); assert pos != -1, "[ERROR] faccessat() not found in fs/open.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\n__attribute__((hot))\nextern int ksu_handle_faccessat(int *dfd, const char __user **filename_user,\n\t\t\t\tint *mode, int *flags);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] faccessat() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_faccessat(&dfd, &filename, &mode, NULL);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU faccessat hook applied.")'
-
-          echo "===== Verify ReSukiSU faccessat hook ====="
-          grep -n -A12 -B5 "ksu_handle_faccessat" fs/open.c
-
-    - name: Apply ReSukiSU Stat Hooks
-      run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-
-        echo "===== Applying ReSukiSU stat hooks ====="
-
-        if grep -q "ksu_handle_stat" fs/stat.c; then
-          echo "[INFO] ksu_handle_stat already exists, skipping."
-        else
-          python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,"; pos=s.find(marker); assert pos != -1, "[ERROR] newfstatat() not found in fs/stat.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] newfstatat() opening brace not found"; target="\n\terror = vfs_fstatat("; target_pos=s.find(target,brace); assert target_pos != -1, "[ERROR] vfs_fstatat() not found in newfstatat()"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_stat(&dfd, &filename, &flag);\n#endif\n"; s=s[:target_pos]+call+s[target_pos:]; p.write_text(s); print("[OK] ReSukiSU newfstatat hook applied.")'
-        fi
-
-        if grep -q "ksu_handle_newfstat_ret" fs/stat.c; then
-          echo "[INFO] ksu_handle_newfstat_ret already exists, skipping."
-        else
-          python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user *, statbuf)"; pos=s.find(marker); assert pos != -1, "[ERROR] newfstat() not found in fs/stat.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] newfstat() opening brace not found"; target="\n\treturn error;"; target_pos=s.find(target,brace); assert target_pos != -1, "[ERROR] return error not found in newfstat()"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_newfstat_ret(&fd, &statbuf);\n#endif\n"; s=s[:target_pos]+call+s[target_pos:]; p.write_text(s); print("[OK] ReSukiSU newfstat hook applied.")'
-        fi
-
-        if grep -q "ksu_handle_fstat64_ret" fs/stat.c; then
-          echo "[INFO] ksu_handle_fstat64_ret already exists, skipping."
-        else
-          if grep -q "SYSCALL_DEFINE2(fstat64, unsigned long, fd, struct stat64 __user *, statbuf)" fs/stat.c; then
-            python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE2(fstat64, unsigned long, fd, struct stat64 __user *, statbuf)"; pos=s.find(marker); declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_ptr);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] fstat64() opening brace not found"; target="\n\treturn error;"; target_pos=s.find(target,brace); assert target_pos != -1, "[ERROR] return error not found in fstat64()"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_fstat64_ret(&fd, &statbuf);\n#endif\n"; s=s[:target_pos]+call+s[target_pos:]; p.write_text(s); print("[OK] ReSukiSU fstat64 hook applied.")'
-          else
-            echo "[INFO] fstat64() not present, skipping."
-          fi
-        fi
-
-        if grep -q "SYSCALL_DEFINE4(fstatat64" fs/stat.c; then
-          echo "===== Checking fstatat64() ====="
-
-          if grep -q "ksu_handle_stat(&dfd, &filename, &flag)" fs/stat.c; then
-            echo "[INFO] fstatat64() hook already exists, skipping."
-          else
-            python3 -c 'from pathlib import Path; p=Path("fs/stat.c"); s=p.read_text(); marker="SYSCALL_DEFINE4(fstatat64"; pos=s.find(marker); brace=s.find("{",pos); assert pos != -1 and brace != -1, "[ERROR] fstatat64() not found"; target="\n\terror = vfs_fstatat("; target_pos=s.find(target,brace); assert target_pos != -1, "[ERROR] vfs_fstatat() not found in fstatat64()"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_stat(&dfd, &filename, &flag);\n#endif\n"; s=s[:target_pos]+call+s[target_pos:]; p.write_text(s); print("[OK] ReSukiSU fstatat64 hook applied.")'
-          fi
-        else
-          echo "[INFO] fstatat64() not present, skipping."
-        fi
-
-        echo "===== Verify ReSukiSU stat hooks ====="
-        grep -n -A8 -B5 -E "ksu_handle_stat|ksu_handle_newfstat_ret|ksu_handle_fstat64_ret" fs/stat.c || true
-
-    - name: Apply ReSukiSU Reboot Hook
-      run: |
-          cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-
-          echo "===== Applying ReSukiSU reboot hook ====="
-
-          if grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
-            echo "[INFO] ksu_handle_sys_reboot already exists, skipping."
-            exit 0
-          fi
-
-          python3 -c 'from pathlib import Path; p=Path("kernel/reboot.c"); s=p.read_text(); marker="SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,"; pos=s.find(marker); assert pos != -1, "[ERROR] reboot() not found in kernel/reboot.c"; declaration="#ifdef CONFIG_KSU_MANUAL_HOOK\nextern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,\n\t\t\t\tvoid __user *arg);\n#endif\n\n"; s=s[:pos]+declaration+s[pos:]; pos=s.find(marker); brace=s.find("{",pos); assert brace != -1, "[ERROR] reboot() opening brace not found"; call="\n#ifdef CONFIG_KSU_MANUAL_HOOK\n\tksu_handle_sys_reboot(magic1, magic2, cmd, arg);\n#endif\n"; s=s[:brace+1]+call+s[brace+1:]; p.write_text(s); print("[OK] ReSukiSU reboot hook applied.")'
-
-          echo "===== Verify ReSukiSU reboot hook ====="
-          grep -n -A12 -B5 "ksu_handle_sys_reboot" kernel/reboot.c
-          
     - name: Setup Configuration for Kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
