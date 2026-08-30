@@ -95,38 +95,6 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)  
             export PATH=$GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin:$PATH
             export CROSS_COMPILE=aarch64-linux-
-
-
-          echo "===== GCC diagnostic ====="
-          echo "CC=${CC:-<unset>}"
-          echo "CROSS_COMPILE=${CROSS_COMPILE:-<unset>}"
-          echo "KCFLAGS=${KCFLAGS:-<unset>}"
-          echo "CFLAGS=${CFLAGS:-<unset>}"
-          echo "KBUILD_CFLAGS=${KBUILD_CFLAGS:-<unset>}"
-          echo "DISABLE_LTO_CONFIG=${DISABLE_LTO_CONFIG:-<unset>}"
-          echo "DISABLE_CC_WERROR=${DISABLE_CC_WERROR:-<unset>}"
-
-          echo "===== GCC version ====="
-          ${CROSS_COMPILE}gcc --version | head -n 2
-
-          echo "===== GCC wrapper ====="
-          which ${CROSS_COMPILE}gcc
-          readlink -f $(which ${CROSS_COMPILE}gcc) || true
-
-          echo "===== toolchain-wrapper ====="
-          sed -n '1,240p' \
-            $GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin/toolchain-wrapper
-
-          echo "===== aarch64-linux-gcc ====="
-          file \
-            $GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin/aarch64-linux-gcc
-
-          echo "===== Search true in toolchain ====="
-          grep -Rns -E '(^|[^A-Za-z])true([^A-Za-z]|$)' \
-            $GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin \
-            2>/dev/null || true
-            
-          
             mkdir -p out
             make ARCH=arm64 O=out clean
             make ARCH=arm64 O=out mrproper
