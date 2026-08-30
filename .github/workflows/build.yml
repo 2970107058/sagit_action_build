@@ -106,6 +106,10 @@ jobs:
             make ARCH=arm64 O=out clean
             make ARCH=arm64 O=out mrproper
             make ARCH=arm64 O=out vendor/xiaomi/${{ env.KERNEL_CONFIG }}
+
+            echo "===== Check CONFIG_MACH_XIAOMI ====="
+            grep -n "^CONFIG_MACH_XIAOMI=" out/.config || true
+            
             ./scripts/config --file out/.config --disable CONFIG_COMPAT_VDSO
             make ARCH=arm64 O=out -j$(nproc --all)
 
