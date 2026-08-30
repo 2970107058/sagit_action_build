@@ -241,11 +241,21 @@ jobs:
             
           
             mkdir -p out
+            
+            echo "===== Search literal true in kernel build files ====="
+            grep -Rns -E '(^|[[:space:],])true([[:space:],]|$)' \
+            Makefile \
+            arch/arm64/Makefile \
+            scripts \
+            Kbuild \
+            arch/arm64 \
+            2>/dev/null || true
+            
             make ARCH=arm64 O=out clean
             make ARCH=arm64 O=out mrproper
             make ARCH=arm64 O=out vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             ./scripts/config --file out/.config --disable CONFIG_COMPAT_VDSO
-            make ARCH=arm64 O=out V=1 -j$(nproc --all)
+            make ARCH=arm64 O=out V=1 -j1
 
     - name: Check a kernel output files
       run: |
