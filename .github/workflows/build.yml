@@ -71,6 +71,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
+            echo "CONFIG_MACH_XIAOMI=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU_MANUAL_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
@@ -87,13 +88,6 @@ jobs:
         if [ ${{ env.DISABLE_CC_WERROR }} = true ]; then
             echo "CONFIG_CC_WERROR=n" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
         fi
-
-    - name: Check mdss_prim_panel_fb_unblank
-      run: |
-        cd "$GITHUB_WORKSPACE/kernel_workspace/android-kernel"
-
-        echo "===== Search mdss_prim_panel_fb_unblank ====="
-        grep -Rns "mdss_prim_panel_fb_unblank" . || true
         
     - name: Build kernel
       run: |
