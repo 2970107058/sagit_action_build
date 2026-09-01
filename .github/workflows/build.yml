@@ -119,7 +119,6 @@ jobs:
        cd $GITHUB_WORKSPACE/kernel_workspace
        git clone https://github.com/osm0sis/AnyKernel3.git
        cd AnyKernel3
-
        sed -i 's/device.name1=maguro/device.name1=sagit/' anykernel.sh
        sed -i '/device.name2=/d' anykernel.sh
        sed -i '/device.name3=/d' anykernel.sh
