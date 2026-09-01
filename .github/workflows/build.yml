@@ -125,6 +125,8 @@ jobs:
        sed -i '/device.name4=/d' anykernel.sh
        sed -i '/device.name5=/d' anykernel.sh
        sed -i 's#BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;#BLOCK=/dev/block/bootdevice/by-name/boot;#' anykernel.sh
+       sed -i '/# init.tuna.rc/,/append_file init.tuna.rc "bootscript" init.tuna;/d' anykernel.sh
+       sed -i '/# fstab.tuna/,/append_file fstab.tuna "usbdisk" fstab;/d' anykernel.sh
        cp ../android-kernel/out/arch/arm64/boot/${{ env.KERNEL_IMAGE_NAME }} ./
        rm -rf .git* README.md
     
