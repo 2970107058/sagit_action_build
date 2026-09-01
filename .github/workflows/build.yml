@@ -89,30 +89,6 @@ jobs:
             echo "CONFIG_CC_WERROR=n" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
         fi
 
-    - name: Check OIS definitions
-      run: |
-        cd "$GITHUB_WORKSPACE/kernel_workspace/android-kernel"
-
-        echo "===== SENSOR_SUPPORT_OIS_FLAG ====="
-        grep -Rns "SENSOR_SUPPORT_OIS_FLAG" drivers include 2>/dev/null || true
-
-        echo "===== OIS_FACTOR1 ====="
-        grep -Rns "OIS_FACTOR1" drivers include 2>/dev/null || true
-
-        echo "===== OIS_FACTOR2 ====="
-        grep -Rns "OIS_FACTOR2" drivers include 2>/dev/null || true
-
-        echo "===== msm_ois_shift_gain ====="
-        grep -Rns "msm_ois_shift_gain" drivers include 2>/dev/null || true
-
-        echo "===== FL definition ====="
-        grep -RnsE '(^|[^A-Za-z0-9_])FL([^A-Za-z0-9_]|$)' \
-          drivers/media include 2>/dev/null || true
-
-        echo "===== msm_actuator.c around OIS code ====="
-        sed -n '700,780p' \
-          drivers/media/platform/msm/camera_v2/sensor/actuator/msm_actuator.c
-          
     - name: Build kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
@@ -124,10 +100,6 @@ jobs:
             make ARCH=arm64 O=out clean
             make ARCH=arm64 O=out mrproper
             make ARCH=arm64 O=out vendor/xiaomi/${{ env.KERNEL_CONFIG }}
-
-            echo "===== Check CONFIG_MACH_XIAOMI ====="
-            grep -n "^CONFIG_MACH_XIAOMI_MSM8998=" out/.config || true
-            
             ./scripts/config --file out/.config --disable CONFIG_COMPAT_VDSO
             make ARCH=arm64 O=out -j$(nproc --all)
 
