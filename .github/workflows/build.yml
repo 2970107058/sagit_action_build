@@ -71,7 +71,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         
-            echo "CONFIG_MACH_XIAOMI=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
+            echo "CONFIG_MACH_XIAOMI_MSM8998=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             echo "CONFIG_KSU_MANUAL_HOOK=y" >> arch/arm64/configs/vendor/xiaomi/${{ env.KERNEL_CONFIG }}
@@ -126,7 +126,7 @@ jobs:
             make ARCH=arm64 O=out vendor/xiaomi/${{ env.KERNEL_CONFIG }}
 
             echo "===== Check CONFIG_MACH_XIAOMI ====="
-            grep -n "^CONFIG_MACH_XIAOMI=" out/.config || true
+            grep -n "^CONFIG_MACH_XIAOMI_MSM8998=" out/.config || true
             
             ./scripts/config --file out/.config --disable CONFIG_COMPAT_VDSO
             make ARCH=arm64 O=out -j$(nproc --all)
