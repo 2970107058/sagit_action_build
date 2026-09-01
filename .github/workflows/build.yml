@@ -4,6 +4,12 @@ on:
     types: [started]
 
   workflow_dispatch:
+    inputs:
+      enable_ccache:
+        description: '启用ccache,可减少二次编译时间'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -14,6 +20,7 @@ jobs:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
       CCACHE_NOHASHDIR: "true"
       CCACHE_HARDLINK: "true"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
       CI: "false"
     steps:
     - uses: actions/checkout@v4
@@ -45,6 +52,16 @@ jobs:
         sudo apt-get install -y pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl 
         sudo apt-get install -y zip unzip tar gzip bzip2 rar unrar llvm g++-multilib bison gperf zlib1g-dev automake
         mkdir -p $GITHUB_WORKSPACE/kernel_workspace
+
+    - name: Cache ccache
+      if: inputs.enable_ccache == true
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ${{ runner.os }}-ccache-${{ env.KERNEL_SOURCE_BRANCH }}-${{ hashFiles('config.env') }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-${{ env.KERNEL_SOURCE_BRANCH }}-
+          ${{ runner.os }}-ccache-
  
     - name: Download gcc-lineageos
       run: |
@@ -96,12 +113,26 @@ jobs:
         export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)  
             export PATH=$GITHUB_WORKSPACE/kernel_workspace/gcc-lineageos/bin:$PATH
             export CROSS_COMPILE=aarch64-linux-
+
+        if [ "${{ inputs.enable_ccache }}" = "true" ]; then
+            export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+            export PATH="/usr/lib/ccache:$PATH"
+            echo "ccache enabled"
+            ccache --show-config
+            ccache --show-stats
+        else
+            echo "ccache disabled"
+        fi
+        
             mkdir -p out
-            make ARCH=arm64 O=out clean
-            make ARCH=arm64 O=out mrproper
             make ARCH=arm64 O=out vendor/xiaomi/${{ env.KERNEL_CONFIG }}
             ./scripts/config --file out/.config --disable CONFIG_COMPAT_VDSO
             make ARCH=arm64 O=out -j$(nproc --all)
+
+        if [ "${{ inputs.enable_ccache }}" = "true" ]; then
+            echo "===== ccache statistics ====="
+            ccache --show-stats
+        fi
 
     - name: Check a kernel output files
       run: |
