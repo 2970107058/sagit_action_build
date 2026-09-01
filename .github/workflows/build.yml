@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       enable_ccache:
-        description: '启用ccache,可减少二次编译时间'
+        description: '启用ccache,可提升二次编译速度'
         required: false
         default: false
         type: boolean
